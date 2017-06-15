@@ -5,8 +5,8 @@
 import requests
 import os
 import bs4
-import logging
 import sys
+
 
 # the main function of this program
 def owlturd_download(pagecount):
@@ -24,7 +24,6 @@ def owlturd_download(pagecount):
             print("An Error {} has occured".format(exc))
         soup = bs4.BeautifulSoup(res.text, "html.parser")
         comicelem = soup.select("img.photo-md")
-        logging.warning("len comicElem:" + str(len(comicelem)))
 
         if not comicelem:  # if there are no imgs
             print("Could not find comic")
@@ -33,7 +32,6 @@ def owlturd_download(pagecount):
                 try:
                     comicurl = comicelem[img].get("src")  # get specific img-url
                     print("-Downloading comic: {}".format(comicurl))
-                    logging.info(comicurl)
                     res = requests.get(comicurl, stream=True)  # get the img
                     res.raise_for_status()  # validation
                     os.makedirs(os.path.join("owlturd", ("page" + str(count))), exist_ok=True)  # folder for imgs
@@ -46,17 +44,11 @@ def owlturd_download(pagecount):
                     for chunk in res.iter_content(100000):
                         imagefile.write(chunk)
                     imagefile.close()
-
-        url = "http://owlturd.com/" + "page/" + str(count)
-        logging.critical(url)
+        # next page
+        count += 1
+        url = "http://owlturd.com/page/" + str(count)
 
 if __name__ == "__main__":
-
-    # This was for testing purposes
-    logging.basicConfig(  # filename="dumb.log",
-        level=logging.WARNING,
-        format="%(asctime)s - %(levelname)s - %(message)s -in function: %(funcName)s")
-    logging.disable(logging.CRITICAL)  # now disabled
 
     # Start: Validation of use and desired pagenumber to download
     print("This program will download comics from 'owlturd.com'.")
@@ -66,15 +58,19 @@ if __name__ == "__main__":
     if confirm.lower() == "y":
         while True:
             try:
-                pagecount = int(input("How many pages? Max: 77. \n >>"))
-            except ValueError:
-                print("Enter a number < 77!")
-                continue
-            if pagecount > 77:
-                print("Enter a number < 77!")
+                pagecount_test = int(input("How many pages? \n >>"))
+                url_test = "http://owlturd.com/page/" + str(pagecount_test)
+                res_test = requests.get(url_test)
+                res_test.raise_for_status()
+                soup_test = bs4.BeautifulSoup(res_test.text, "html.parser")
+                comicelem_test = soup_test.select("img.photo-md")
+                if not comicelem_test:  # if there are no imgs
+                    raise EOFError  # "end of website is reached"
+            except (ValueError, EOFError):
+                print("There aren't so many pages or input is invalid.")
                 continue
             else:
-                owlturd_download(pagecount)
+                owlturd_download(pagecount_test)
                 print("Done!")
                 break
     else:
